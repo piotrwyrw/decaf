@@ -1,5 +1,7 @@
 # DeCAF
 
+A very simple archive file format.
+
 ## File format
 
 | Description             | Size / Data type | Structure variable |
