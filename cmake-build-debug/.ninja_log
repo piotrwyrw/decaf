@@ -1,0 +1,5 @@
+# ninja log v5
+4	158	6962061753229318	build.ninja	13cd3d90e86b971d
+0	61	6962061754509501	CMakeFiles/archDecaf.dir/main.c.obj	a00f40c007102b42
+2	73	6962061754629465	CMakeFiles/archDecaf.dir/arch.c.obj	202f82d0eb4f3f0c
+73	148	6962061755339457	archDecaf.exe	e6f434f87a83b66e

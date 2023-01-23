@@ -1,0 +1,3 @@
+C:/Users/pwpio/CLionProjects/archDecaf/cmake-build-debug/CMakeFiles/archDecaf.dir
+C:/Users/pwpio/CLionProjects/archDecaf/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/pwpio/CLionProjects/archDecaf/cmake-build-debug/CMakeFiles/rebuild_cache.dir
