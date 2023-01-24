@@ -22,6 +22,10 @@ void archEntry_freeBuffers(arch_entry *entry) {
         free(entry->data);
 }
 
+_Bool archEntry_isNull(arch_entry *entry) {
+    return entry->data == NULL || entry->name == NULL;
+}
+
 arch_file *archFile_create(FILE *f) {
     arch_file *af = malloc(sizeof(arch_file));
     af->file = f;
@@ -56,8 +60,8 @@ void archFile_dispose(arch_file *af) {
 
 void archFile_write(arch_file *af) {
     uint32_t magic = DECAF_MAGIC;
-    fwrite(&magic, sizeof(uint32_t), 1, af->file);
 
+    fwrite(&magic, sizeof(uint32_t), 1, af->file);
     fwrite(&(af->entry_ct), sizeof(uint64_t), 1, af->file);
 
     magic = 0xC0FFEE;
@@ -77,83 +81,110 @@ void archFile_write(arch_file *af) {
 
 }
 
-decaf_error archFile_parse(arch_file *af) {
-    // Ensure that this is indeed a DeCAF file by comparing the magic number
+arch_entry archEntry_parseOne(arch_file *af) {
+    // For error checking
+    size_t read;
+
+    // Magic number
     uint32_t magic;
-    uint64_t count;
+    fread(&magic, sizeof(uint32_t), 1, af->file);
 
-    if (fread(&magic, sizeof(uint32_t), 1, af->file) != sizeof(uint32_t))
-        return DECAF_WRONG_MAGIC_SIZE;
+    if (magic != DECAF_ENTRY)
+        return NULL_ENTRY;
 
-    if (magic != DECAF_MAGIC)
-        return DECAF_WRONG_MAGIC;
+    // Length of the file name
+    uint64_t name_length;
+    read = fread(&name_length, sizeof(uint64_t), 1, af->file);
 
-    // Then, get the entry count (control value)
+    if (read != 1)
+        return NULL_ENTRY;
 
-    if (fread(&count, sizeof(uint64_t), 1, af->file) != sizeof(uint64_t))
-        return DECAF_WRONG_ENTRY_COUNT_SIZE;
+    // File name
+    char *name = calloc(name_length + 1, sizeof(char));
+    read = fread(name, sizeof(char), name_length, af->file);
 
-    af->entry_ct = count;
-    af->table = malloc(sizeof(arch_entry) * count);
-
-    /**
-     * Parse the entries
-     */
-
-    int i = 0;
-    int c = 1;
-
-    while (1) {
-
-        if (feof(af->file))
-            break;
-
-        // Entry magic number
-        if (fread(&magic, sizeof(uint32_t), 1, af->file) != sizeof(uint32_t))
-            return DECAF_WRONG_ENTRY_MAGIC_SIZE;
-
-        if (magic != DECAF_ENTRY)
-            return DECAF_WRONG_ENTRY_MAGIC;
-
-        i ++;
-        c ++;
-
-        if (c > count)
-            return DECAF_TOO_MANY_ENTRIES;
-
-        uint64_t name_le;
-        char *name;
-        uint64_t data_le;
-        void *data;
-
-        // Name length
-        if (fread(&name_le, sizeof(uint64_t), 1, af->file) != sizeof(uint64_t))
-            return DECAF_WRONG_ENTRY_NAME_SIZE;
-
-        name = calloc(name_le + 1, sizeof(char));
-
-        // File name
-        if (fread(&name, sizeof(char), name_le, af->file) != sizeof(char) * name_le)
-            return DECAF_WRONG_ENTRY_FILE_NAME_LENGTH;
-
-        // Data size
-        if (fread(&data_le, sizeof(uint64_t), 1, af->file) != sizeof(uint64_t))
-            return DECAF_WRONG_ENTRY_DATA_LENGTH_SIZE;
-
-        data = calloc(data_le, sizeof(char));
-
-        // Raw data
-        if (fread(&data, data_le, 1, af->file) != data_le)
-            return DECAF_WRONG_ENTRY_DATA_LENGTH;
-
-        af->table[i].name_le = name_le;
-        af->table[i].name = name;
-        af->table[i].data_le = data_le;
-        af->table[i].data = data;
+    if (read != name_length) {
+        free(name);
+        return NULL_ENTRY;
     }
 
-    if (c < count)
-        return DECAF_TOO_FEW_ENTRIES;
+    // Size of the raw data
+    uint64_t data_size;
+    read = fread(&data_size, sizeof(uint64_t), 1, af->file);
 
-    return DECAF_OK;
+    if (read != 1)
+        return NULL_ENTRY;
+
+    // Raw data
+    char *data = calloc(data_size, sizeof(char));
+    read = fread(data, sizeof(char), data_size, af->file);
+
+    if (read != data_size) {
+        free(data);
+        free(name);
+        return NULL_ENTRY;
+    }
+
+    return (arch_entry) {.name_le = name_length, .name = name, .data_le = data_size, .data = data};
+}
+
+_Bool archFile_parse(arch_file *af) {
+
+    // Amount of elements read, for error checking
+    size_t read;
+
+    // First, ensure that the magic number is in place
+    uint32_t magic;
+    fread(&magic, sizeof(uint32_t), 1, af->file);
+
+    if (magic != DECAF_MAGIC)
+        return 0;
+
+    // Get the entries count
+    uint64_t entries;
+    read = fread(&entries, sizeof(uint64_t), 1, af->file);
+
+    if (read != 1)
+        return 0;
+
+    // Allocate the entry table
+    arch_entry *table = calloc(sizeof(arch_entry), entries);
+
+    // Parse the entries
+
+    int ix = 0;
+
+    while (1) {
+        if (feof(af->file) || ix >= entries)
+            break;
+
+        arch_entry entry = archEntry_parseOne(af);
+
+        if (archEntry_isNull(&entry))
+            goto exit_error;
+
+        table[ix ++] = entry;
+    }
+
+    // Commit everything to the target struct
+    af->table = table;
+    af->entry_ct = entries;
+
+    return 1;
+
+    exit_error:
+    free(table);
+    return 0;
+}
+
+void archFile_list(arch_file *af) {
+    printf("The archive contains %ld:w: entries:\n", af->entry_ct);
+
+    if (!af->table) {
+        printf("Failed to list the contents: The allocation table is null.\n");
+        return;
+    }
+
+    for (uint64_t i = 0; i < af->entry_ct; i ++)
+        printf("\t[%ld bytes] %s\n", af->table[i].data_le, af->table[i].name);
 }

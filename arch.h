@@ -12,47 +12,37 @@
 
 #define DECAF_MAGIC (0xDECAF)
 #define DECAF_ENTRY (0xC0FFEE)
-
-typedef enum {
-    DECAF_WRONG_MAGIC_SIZE                      = 0,
-    DECAF_WRONG_MAGIC                           = 0,
-    DECAF_WRONG_ENTRY_MAGIC_SIZE                = 0,
-    DECAF_WRONG_ENTRY_MAGIC                     = 0,
-
-    DECAF_WRONG_ENTRY_COUNT_SIZE                = 0,
-    DECAF_WRONG_ENTRY_NAME_SIZE                 = 0,
-    DECAF_WRONG_ENTRY_FILE_NAME_LENGTH          = 0,
-    DECAF_WRONG_ENTRY_DATA_LENGTH_SIZE          = 0,
-    DECAF_WRONG_ENTRY_DATA_LENGTH               = 0,
-
-    DECAF_TOO_MANY_ENTRIES                      = 0,
-    DECAF_TOO_FEW_ENTRIES                       = 0,
-
-    DECAF_NOTHING                                = 1,
-    DECAF_OK                                     = 1
-} decaf_error;
+#define NULL_ENTRY (arch_entry) {.data_le = 0, .data = NULL, .name_le = 0, .name = NULL}
 
 typedef struct {
-    uint64_t    name_le;
-    char        *name;
-    uint64_t    data_le;
-    void        *data;
+    uint64_t name_le;
+    char *name;
+    uint64_t data_le;
+    void *data;
 } arch_entry;
 
 typedef struct {
-    FILE        *file;
-    uint64_t    entry_ct;
-    arch_entry  *table;
+    FILE *file;
+    uint64_t entry_ct;
+    arch_entry *table;
 } arch_file;
 
 void archEntry_fromFile(arch_entry *target, char *name, FILE *f);
+
 void archEntry_freeBuffers(arch_entry *entry);
 
+_Bool archEntry_isNull(arch_entry *entry);
+
 arch_file *archFile_create(FILE *f);
+
 arch_file *archFile_createManual(FILE *f, uint64_t entry_ct, arch_entry *entries);
+
 void archFile_dispose(arch_file *af);
+
 void archFile_write(arch_file *af);
 
-decaf_error archFile_parse(arch_file *af);
+_Bool archFile_parse(arch_file *af);
+
+void archFile_list(arch_file *af);
 
 #endif //DCAF_ARCH_H

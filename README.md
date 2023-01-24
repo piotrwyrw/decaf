@@ -17,5 +17,5 @@ A very simple archive file format.
 | **0xC0FFEE**                              | uint32_t         | _(not applicable)_ |
 | Length of the file name                   | uint64_t         | name_le            |
 | File name with the length specified above | char [name_le]   | name               |
-| Size of the raw data                      | uint64_t         | data_sze           |
+| Size of the raw data                      | uint64_t         | data_le            |
 | Raw file data                             | void *           | data               |

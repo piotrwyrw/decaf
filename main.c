@@ -5,23 +5,51 @@
 
 int main() {
 
-    FILE *target = fopen("output.decaf", "w");
+    FILE *target = fopen("output.decaf", "rw");
 
-    FILE *source = fopen("example.txt", "r");
+    FILE *source1 = fopen("1.txt", "r");
+    FILE *source2 = fopen("2.txt", "r");
 
-    arch_entry entry;
-    archEntry_fromFile(&entry, "example.txt", source);
+    if (!source1 || !source2) {
+        printf("Files not opened successfully.\n");
 
-    arch_entry entries[] = {entry};
+        if (target)
+            fclose(target);
 
-    arch_file *file = archFile_createManual(target, 1, entries);
+        return 0;
+    }
+
+    arch_entry entry1;
+    archEntry_fromFile(&entry1, "1.txt", source1);
+
+    arch_entry entry2;
+    archEntry_fromFile(&entry2, "2.txt", source2);
+
+    arch_entry entries[] = {entry1, entry2};
+
+    arch_file *file = archFile_createManual(target, 2, entries);
 
     archFile_write(file);
 
-    fclose(target);
-    fclose(source);
+    fclose(source1);
+    fclose(source2);
 
     archFile_dispose(file);
+
+    // Read ....
+
+    arch_file *read = archFile_create(target);
+
+    _Bool err = archFile_parse(read);
+
+    if (!err) {
+        printf("An error occurred during parsing.\n");
+        return 0;
+    }
+
+    archFile_list(read);
+
+    fclose(target);
 
     return 0;
 }
