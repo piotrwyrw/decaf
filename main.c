@@ -8,7 +8,7 @@ int package(int argc, char **argv) {
     arch_file *file = NULL;
     unsigned n = argc - 3;
 
-    FILE *ftarget = fopen(argv[2], "w");
+    FILE *ftarget = fopen(argv[2], "wb");
 
     if (!ftarget) {
         printf("[ERR] Failed to open target file for writing: \"%s\".\n", argv[2]);
@@ -20,7 +20,7 @@ int package(int argc, char **argv) {
     unsigned ix = 0;
 
     for (unsigned i = 3; i < argc; i ++) {
-        FILE *f = fopen(argv[i], "r");
+        FILE *f = fopen(argv[i], "rb");
 
         if (!f) {
             printf("[ERR] Failed to open file for reading: \"%s\"\n", argv[i]);
@@ -54,7 +54,7 @@ int list(int argc, char **argv) {
 
     char *src = argv[2];
 
-    FILE *f = fopen(src, "r");
+    FILE *f = fopen(src, "rb");
 
     if (!f) {
         printf("[ERR] Failed to open file for reading: \"%s\".\n", src);
@@ -63,8 +63,8 @@ int list(int argc, char **argv) {
 
     arch_file *af = archFile_create(f);
 
-    if (!archFile_parse(af)) {
-        printf("[ERR] An error occurred while parsing the file \"%s\".\n", src);
+    if (archFile_parse(af) != 1) {
+        printf("[ERR] An error occurred while parsing the file \"%s\": %s\n", src, last_error_string());
         goto exit;
     }
 
@@ -83,7 +83,7 @@ int unpack(int argc, char **argv) {
 
     char *src = argv[2];
 
-    FILE *f = fopen(src, "r");
+    FILE *f = fopen(src, "rb");
 
     if (!f) {
         printf("[ERR] Failed to open file for reading: \"%s\".\n", src);
@@ -92,8 +92,8 @@ int unpack(int argc, char **argv) {
 
     arch_file *af = archFile_create(f);
 
-    if (!archFile_parse(af)) {
-        printf("[ERR] An error occurred while parsing the file \"%s\".\n", src);
+    if (archFile_parse(af) != 1) {
+        printf("[ERR] An error occurred while parsing the file \"%s\": %s\n", src, last_error_string());
         goto exit;
     }
 

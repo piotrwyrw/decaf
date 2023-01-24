@@ -89,15 +89,19 @@ arch_entry archEntry_parseOne(arch_file *af) {
     uint32_t magic;
     fread(&magic, sizeof(uint32_t), 1, af->file);
 
-    if (magic != DECAF_ENTRY)
+    if (magic != DECAF_ENTRY) {
+        last_error = ERR_NO_ENTRY_MAGIC;
         return NULL_ENTRY;
+    }
 
     // Length of the file name
     uint64_t name_length;
     read = fread(&name_length, sizeof(uint64_t), 1, af->file);
 
-    if (read != 1)
+    if (read != 1) {
+        last_error = ERR_FIELD_FILE_NAME_LENGTH;
         return NULL_ENTRY;
+    }
 
     // File name
     char *name = calloc(name_length + 1, sizeof(char));
@@ -105,6 +109,7 @@ arch_entry archEntry_parseOne(arch_file *af) {
 
     if (read != name_length) {
         free(name);
+        last_error = ERR_FIELD_FILE_NAME;
         return NULL_ENTRY;
     }
 
@@ -112,23 +117,26 @@ arch_entry archEntry_parseOne(arch_file *af) {
     uint64_t data_size;
     read = fread(&data_size, sizeof(uint64_t), 1, af->file);
 
-    if (read != 1)
+    if (read != 1) {
+        last_error = ERR_FIELD_RAW_DATA_SIZE;
         return NULL_ENTRY;
+    }
 
     // Raw data
     char *data = calloc(data_size, sizeof(char));
-    read = fread(data, sizeof(char), data_size, af->file);
+    read = fread(data,  1, data_size, af->file);
 
     if (read != data_size) {
         free(data);
         free(name);
+        last_error = ERR_FIELD_RAW_DATA;
         return NULL_ENTRY;
     }
 
     return (arch_entry) {.name_le = name_length, .name = name, .data_le = data_size, .data = data};
 }
 
-_Bool archFile_parse(arch_file *af) {
+int archFile_parse(arch_file *af) {
 
     // Amount of elements read, for error checking
     size_t read;
@@ -138,14 +146,14 @@ _Bool archFile_parse(arch_file *af) {
     fread(&magic, sizeof(uint32_t), 1, af->file);
 
     if (magic != DECAF_MAGIC)
-        return 0;
+        return ERR_NO_ENTRY_MAGIC;
 
     // Get the entries count
     uint64_t entries;
     read = fread(&entries, sizeof(uint64_t), 1, af->file);
 
     if (read != 1)
-        return 0;
+        return ERR_FIELD_ENTRIES;
 
     // Allocate the entry table
     arch_entry *table = calloc(sizeof(arch_entry), entries);
@@ -174,7 +182,7 @@ _Bool archFile_parse(arch_file *af) {
 
     exit_error:
     free(table);
-    return 0;
+    return ERR_ENTRY_NULL;
 }
 
 void archFile_list(arch_file *af) {
@@ -213,4 +221,29 @@ void archFile_expand(arch_file *af) {
     }
 
     printf("[IFO] Operation finished with %ld errors.\n",  err);
+}
+
+const char *last_error_string() {
+    switch (last_error) {
+        case ERR_NO_ENTRY_MAGIC:
+            return "No magic number at the file entry";
+        case ERR_FIELD_FILE_NAME_LENGTH:
+            return "Invalid read size for field: file name length.";
+        case ERR_FIELD_FILE_NAME:
+            return "Invalid read size for field: file name.";
+        case ERR_FIELD_RAW_DATA_SIZE:
+            return "Invalid read size for field: raw data size.";
+        case ERR_FIELD_RAW_DATA:
+            return "Invalid read size for field: raw data.";
+        case ERR_FIELD_ENTRIES:
+            return "Invalid read size for field: entry count.";
+        case ERR_ENTRY_NULL:
+            return "An entry is null.";
+        case ERR_FILE_TOO_SMALL:
+            return "The file is too small.";
+        case ERR_READ_FAILED:
+            return "Read failed.";
+        default:
+            return "No errors.";
+    }
 }

@@ -14,6 +14,19 @@
 #define DECAF_ENTRY (0xC0FFEE)
 #define NULL_ENTRY (arch_entry) {.data_le = 0, .data = NULL, .name_le = 0, .name = NULL}
 
+#define ERR_NO_ENTRY_MAGIC 0
+
+#define ERR_FIELD_FILE_NAME_LENGTH (-1)
+#define ERR_FIELD_FILE_NAME (-2)
+#define ERR_FIELD_RAW_DATA_SIZE (-3)
+#define ERR_FIELD_RAW_DATA (-4)
+
+#define ERR_FIELD_ENTRIES (-5)
+#define ERR_ENTRY_NULL (-6)
+
+#define ERR_FILE_TOO_SMALL (-7)
+#define ERR_READ_FAILED (-8)
+
 typedef struct {
     uint64_t name_le;
     char *name;
@@ -26,6 +39,8 @@ typedef struct {
     uint64_t entry_ct;
     arch_entry *table;
 } arch_file;
+
+static int last_error = 1;
 
 void archEntry_fromFile(arch_entry *target, char *name, FILE *f);
 
@@ -41,10 +56,12 @@ void archFile_dispose(arch_file *af);
 
 void archFile_write(arch_file *af);
 
-_Bool archFile_parse(arch_file *af);
+int archFile_parse(arch_file *af);
 
 void archFile_list(arch_file *af);
 
 void archFile_expand(arch_file *af);
+
+const char *last_error_string();
 
 #endif //DCAF_ARCH_H
