@@ -45,4 +45,6 @@ _Bool archFile_parse(arch_file *af);
 
 void archFile_list(arch_file *af);
 
+void archFile_expand(arch_file *af);
+
 #endif //DCAF_ARCH_H

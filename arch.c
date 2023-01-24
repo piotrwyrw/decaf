@@ -178,7 +178,7 @@ _Bool archFile_parse(arch_file *af) {
 }
 
 void archFile_list(arch_file *af) {
-    printf("The archive contains %ld:w: entries:\n", af->entry_ct);
+    printf("The archive contains %ld entries:\n", af->entry_ct);
 
     if (!af->table) {
         printf("Failed to list the contents: The allocation table is null.\n");
@@ -187,4 +187,30 @@ void archFile_list(arch_file *af) {
 
     for (uint64_t i = 0; i < af->entry_ct; i ++)
         printf("\t[%ld bytes] %s\n", af->table[i].data_le, af->table[i].name);
+}
+
+_Bool archEntry_save(arch_entry *ae) {
+    FILE *f = fopen(ae->name, "w");
+
+    if (!f) {
+        printf("[ERR] Failed to open file \"%s\" for writing.\n", ae->name);
+        return 0;
+    }
+
+    fwrite(ae->data, sizeof(char), ae->data_le, f);
+    fclose(f);
+
+    printf("[OK] Wrote file \"%s\".\n", ae->name);
+    return 1;
+}
+
+void archFile_expand(arch_file *af) {
+    printf("[IFO] Writing %ld entries ...\n", af->entry_ct);
+    unsigned err = 0;
+    for (uint64_t i = 0; i < af->entry_ct; i ++) {
+        if (!archEntry_save(&(af->table[i])))
+            err ++;
+    }
+
+    printf("[IFO] Operation finished with %ld errors.\n",  err);
 }
